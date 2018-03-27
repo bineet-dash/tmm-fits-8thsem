@@ -1,0 +1,186 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Tue Jan 23 11:44:13 2018
+
+@author: bineet
+"""
+
+from __future__ import division, absolute_import
+
+from numpy import cos, inf, zeros, array, exp, pi
+import numpy as np
+import scipy as sp
+import sys
+
+EPSILON = sys.float_info.epsilon # typical floating-point calculation error
+
+def make_2x2_array(a, b, c, d, dtype=float):
+    my_array = np.empty((2,2), dtype=dtype)
+    my_array[0,0] = a
+    my_array[0,1] = b
+    my_array[1,0] = c
+    my_array[1,1] = d
+    return my_array
+
+def is_forward_angle(n, theta):
+    assert n.real * n.imag >= 0, ("For materials with gain, it's ambiguous which "
+                                  "beam is incoming vs outgoing. See "
+                                  "https://arxiv.org/abs/1603.02720 Appendix C.\n"
+                                  "n: " + str(n) + "   angle: " + str(theta))
+    ncostheta = n * cos(theta)
+    if abs(ncostheta.imag) > 100 * EPSILON:
+        answer = (ncostheta.imag > 0)
+    else:
+        answer = (ncostheta.real > 0)
+    answer = bool(answer)
+    error_string = ("It's not clear which beam is incoming vs outgoing. Weird"
+                    " index maybe?\n"
+                    "n: " + str(n) + "   angle: " + str(theta))
+    if answer is True:
+        assert ncostheta.imag > -100 * EPSILON, error_string
+        assert ncostheta.real > -100 * EPSILON, error_string
+        assert (n * cos(theta.conjugate())).real > -100 * EPSILON, error_string
+    else:
+        assert ncostheta.imag < 100 * EPSILON, error_string
+        assert ncostheta.real < 100 * EPSILON, error_string
+        assert (n * cos(theta.conjugate())).real < 100 * EPSILON, error_string
+    return answer
+
+def snell(n_1, n_2, th_1):
+    th_2_guess = sp.arcsin(n_1*np.sin(th_1) / n_2)
+    if is_forward_angle(n_2, th_2_guess):
+        return th_2_guess
+    else:
+        return pi - th_2_guess
+
+def list_snell(n_list, th_0):
+    angles = sp.arcsin(n_list[0]*np.sin(th_0) / n_list)
+    if not is_forward_angle(n_list[0], angles[0]):
+        angles[0] = pi - angles[0]
+    if not is_forward_angle(n_list[-1], angles[-1]):
+        angles[-1] = pi - angles[-1]
+    return angles
+
+def interface_r(polarization, n_i, n_f, th_i, th_f):
+    return (n_i-n_f)/(n_i+n_f)
+
+def interface_t(polarization, n_i, n_f, th_i, th_f):
+    return 2*n_i/(n_i+n_f)
+   
+
+def reflectivity(lam_vac, n_list, d_list, th_0=0, pol='s'):  
+    num_layers = len(d_list)
+    kz_list = np.zeros(num_layers,dtype=complex)
+    th_list = np.zeros(num_layers,dtype=complex)
+    delta = np.zeros(num_layers,dtype=complex)
+    
+    th_list = list_snell(n_list, th_0)    
+    isinstance(th_list, list)
+    kz_list = 2 * np.pi * array(n_list) * cos(th_list) / lam_vac
+    olderr = sp.seterr(invalid='ignore')
+    delta = np.multiply(kz_list,d_list)
+    sp.seterr(**olderr)
+    delta[0]=0
+    
+    t_list = zeros((num_layers, num_layers), dtype=complex)
+    r_list = zeros((num_layers, num_layers), dtype=complex)    
+    
+    for i in range(num_layers-1):
+        t_list[i,i+1] = interface_t(pol, n_list[i], n_list[i+1],th_list[i], th_list[i+1])
+        r_list[i,i+1] = interface_r(pol, n_list[i], n_list[i+1],th_list[i], th_list[i+1])
+    
+    I_list = zeros((num_layers,2,2), dtype=complex)
+    L_list = zeros((num_layers,2,2), dtype=complex)
+    M_list = zeros((num_layers, 2, 2), dtype=complex)
+
+    for i in range(0, num_layers-1):
+        I_list[i] = (1/t_list[i,i+1])*make_2x2_array(1, r_list[i,i+1], r_list[i,i+1], 1, dtype=complex)
+        L_list[i] = make_2x2_array(exp(-1j*delta[i]), 0, 0, exp(1j*delta[i]), dtype=complex)
+        M_list[i] = np.dot(L_list[i],I_list[i])
+    
+    Mtilde = make_2x2_array(1, 0, 0, 1, dtype=complex)   
+    for i in range(0, num_layers-1):
+        Mtilde = np.dot(Mtilde, M_list[i])
+    r = Mtilde[1,0]/Mtilde[0,0] 
+    return abs(r)**2  
+    
+def which_layer(d_l, x):
+    layer = 0
+    sum_d = 0
+    while (x > sum_d):
+        sum_d += d_l[layer+1]
+        layer += 1
+    return layer
+
+def e_field(lam_vac, x_list, n_list, d_list, th_0=0, pol='p'):  
+    if len(d_list) != len(n_list):
+        print "Unequal size of d_list and n_list.\n"
+        sys.exit(1)
+        
+    num_layers = len(d_list)
+    if num_layers == 0:
+        print "No layers in DBR \n"
+        sys.exit(1)
+        
+    kz_list = np.zeros(num_layers,dtype=complex)
+    th_list = np.zeros(num_layers,dtype=complex)
+    delta = np.zeros(num_layers,dtype=complex)
+    
+    th_list = list_snell(n_list, th_0)
+    isinstance(th_list, list)
+    kz_list = 2 * np.pi * array(n_list) * cos(th_list) / lam_vac
+    olderr = sp.seterr(invalid='ignore')
+    delta = np.multiply(kz_list,d_list)
+    sp.seterr(**olderr)
+    delta[0]=0
+        
+    t_list = zeros((num_layers, num_layers), dtype=complex)
+    r_list = zeros((num_layers, num_layers), dtype=complex)
+    for i in range(num_layers-1):
+        t_list[i,i+1] = interface_t(pol, n_list[i], n_list[i+1],th_list[i], th_list[i+1])
+        r_list[i,i+1] = interface_r(pol, n_list[i], n_list[i+1],th_list[i], th_list[i+1])
+    
+    I_list = zeros((num_layers,2,2), dtype=complex)
+    L_list = zeros((num_layers,2,2), dtype=complex)
+    M_list = zeros((num_layers, 2, 2), dtype=complex)
+
+    for i in range(0, num_layers-1):
+        I_list[i] = (1/t_list[i,i+1])*make_2x2_array(1, r_list[i,i+1], r_list[i,i+1], 1, dtype=complex)
+        L_list[i] = make_2x2_array(exp(-1j*delta[i]), 0, 0, exp(1j*delta[i]), dtype=complex)
+        M_list[i] = np.dot(L_list[i],I_list[i])
+
+    S_prime = zeros((num_layers-1,2,2), dtype=complex)
+    S_d_prime = zeros((num_layers-1,2,2), dtype=complex)
+
+    for i in range(0,num_layers-1):
+        S_prime[i] = make_2x2_array(1, 0, 0, 1, dtype=complex)
+        S_d_prime[i] = make_2x2_array(1, 0, 0, 1, dtype=complex)
+        
+    for i in range(0,num_layers-1):
+        prod = make_2x2_array(1, 0, 0, 1, dtype=complex)
+        for j in range(0,i):
+            prod = np.dot(prod, M_list[j])
+        S_prime[i] = prod
+                        
+    for i in range(0,num_layers-1):
+        prod = I_list[i]
+        for j in range(i+1,num_layers-1):
+            prod = np.dot(prod, M_list[j])
+        S_d_prime[i] = prod
+    
+    E_field = []
+    d_copied = list(d_list)
+    d_copied[0] = d_copied[len(d_copied)-1]=0
+    d_cs = np.cumsum(d_copied)
+
+    for x in x_list:
+        j = which_layer(d_copied,x)
+        rx = x - d_cs[j-1]
+        numerator = (S_d_prime[j][0,0]*exp(-1j*kz_list[j]*(d_copied[j]-rx)) + \
+                     S_d_prime[j][1,0]*exp(1j*kz_list[j]*(d_copied[j]-rx)) )
+        denom = S_prime[j][0,0]*S_d_prime[j][0,0]*exp(-1j*kz_list[j]*d_copied[j]) + \
+                 S_prime[j][0,1]*S_d_prime[j][1,0]*exp(1j*kz_list[j]*d_copied[j])           
+        field = np.abs(numerator/denom)**2
+        E_field.append(field)
+        
+    return E_field
