@@ -22,7 +22,7 @@ def get_n_dbr(wavelength, n_stack):
     return n_list
     
 def get_d_dbr(n_stack):
-    d_a = 53
+    d_a = 52
     d_b = 105
     single_stack_d_list = [d_a,d_b]
     d_list = []
@@ -47,19 +47,19 @@ wv_l=350
 wv_u=1000
 wv_range = np.linspace(wv_l,wv_u,num=wv_u-wv_l+1)
 
-number_of_bilayers = 5
+number_of_bilayers = 7
 d_list = [inf] + [30] + get_d_dbr(number_of_bilayers) + [inf]
+#d_list = [inf] + list(reversed(get_d_dbr(number_of_bilayers))) + [30] + [inf]
 
-def get_n_list(wv, metal=0):
-    if metal==1:
-        n_list = [1]+ [n_gold(np.floor(wv))] + get_n_dbr(np.floor(wv),number_of_bilayers) +[1]
-    else:
-        n_list = [1]+ [1] + get_n_dbr(np.floor(wv),number_of_bilayers) +[1]
+def get_n_list(wv, metal=1):
+    n_list = [1]+ [n_gold(np.floor(wv))]+ get_n_dbr(np.floor(wv),number_of_bilayers)+[1]
+#    n_list = [1]+ list(reversed(get_n_dbr(np.floor(wv),number_of_bilayers)))+ [n_gold(np.floor(wv))] +[1]
     return n_list       
      
 d_copied = list(d_list)
 d_copied[0] = d_copied[len(d_copied)-1] = 0
 x_range = np.linspace(0,sum(d_copied),num=sum(d_copied))
+
 
 def get_field(event):
     plt.figure(200)
@@ -83,22 +83,33 @@ def get_field(event):
 Rnorm = []
 for wv in wv_range:
     n_list = get_n_list(wv)
+#    n_list[len(n_list)-3]=1
     Rnorm.append(reflectivity(wv,n_list,d_list))
+    
     
 main_fig = plt.figure(100)
 plt.ylim([0,1])
-plt.plot(wv_range, Rnorm, 'red', label ="R0 Simulation")
+plt.plot(wv_range, Rnorm, 'red', label ="R2 Simulation")
 
-expt_wv = []
-expt_r0 = []
-with open("plot_data_ri.tsv") as f:
+#Rnorm2 = []
+#for wv in wv_range:
+#    n_list = get_n_list(wv)
+#    n_list[len(n_list)-3]=1
+#    d_list[len(d_list)-3]=80
+#    Rnorm2.append(reflectivity(wv,n_list,d_list))
+#plt.plot(wv_range, Rnorm2, 'purple', label ="R2 (gap=80)")
+
+expt_wv=[]
+expt_r2 = []
+with open("reflectivity_air-metal-dbr.tsv") as f:
+#with open("19th_march_data.tsv") as f:
     reader = csv.DictReader(f, delimiter='\t')
     for row in reader:
         expt_wv.append(row['wv'])
-        expt_r0.append(row['R0'])        
+        expt_r2.append(row['R2'])
 expt_wv = map(float,expt_wv)
-expt_r0 = [i*0.01 for i in map(float,expt_r0)]
-plt.plot(expt_wv, expt_r0, 'black', label ="R0 Simulation")
+expt_r2 = [i*0.01 for i in map(float,expt_r2)]
+plt.plot(expt_wv,expt_r2,'black', label = "Experimental R2")
 
 plt.xlabel('Wavelength (nm)')
 plt.ylabel('Fraction reflected')

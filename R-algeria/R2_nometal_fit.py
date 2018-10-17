@@ -22,8 +22,8 @@ def get_n_dbr(wavelength, n_stack):
     return n_list
     
 def get_d_dbr(n_stack):
-    d_a = 52
-    d_b = 105
+    d_a = 53
+    d_b = 100
     single_stack_d_list = [d_a,d_b]
     d_list = []
     for i in range(n_stack):
@@ -47,7 +47,7 @@ wv_l=350
 wv_u=1000
 wv_range = np.linspace(wv_l,wv_u,num=wv_u-wv_l+1)
 
-number_of_bilayers = 7
+number_of_bilayers = 5
 d_list = [inf] + [30] + get_d_dbr(number_of_bilayers) + [inf]
 
 def get_n_list(wv, metal=0):

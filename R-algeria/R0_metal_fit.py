@@ -14,6 +14,21 @@ from matplotlib import  pyplot as plt
 
 from core_lib import reflectivity, e_field
 
+
+def get_n_dbr(wavelength, n_stack):
+    n_list = []
+    for i in range(n_stack):
+        n_list += [2.1,1.47]    
+    return n_list
+    
+def get_d_dbr(n_stack):
+    d_a = 51
+    d_b = 104
+    single_stack_d_list = [d_a,d_b]
+    d_list = []
+    for i in range(n_stack):
+        d_list += single_stack_d_list
+    return d_list        
     
 def read_csv(csv_file):
     with open(csv_file,'rU') as f:
@@ -27,30 +42,14 @@ def n_gold(search):
         if sublist[0]==search:
             return sublist[1]+1j*sublist[2]
             break
-
-def get_n_dbr(wavelength, n_stack):
-    n_list = []
-    for i in range(n_stack):
-        n_list += [2.1,1.47]    
-    return n_list
-    
-def get_d_dbr(n_stack):
-    d_a = 53
-    d_b = 103
-    single_stack_d_list = [d_a,d_b]
-    d_list = []
-    for i in range(n_stack):
-        d_list += single_stack_d_list
-    return d_list        
             
 wv_l=350
 wv_u=1000
 wv_range = np.linspace(wv_l,wv_u,num=wv_u-wv_l+1)
 
-number_of_bilayers = 6
-d_list = [inf] + [25] + get_d_dbr(number_of_bilayers) + [inf]
-d_list[2]= 0
-d_list[3]= 70
+number_of_bilayers = 7
+d_list = [inf] + [30] + get_d_dbr(number_of_bilayers) + [inf]
+d_list[2]=0
 
 def get_n_list(wv, metal=1):
     if metal==1:
@@ -62,6 +61,7 @@ def get_n_list(wv, metal=1):
 d_copied = list(d_list)
 d_copied[0] = d_copied[len(d_copied)-1] = 0
 x_range = np.linspace(0,sum(d_copied),num=sum(d_copied))
+
 
 def get_field(event):
     plt.figure(200)
@@ -89,18 +89,24 @@ for wv in wv_range:
     
 main_fig = plt.figure(100)
 plt.ylim([0,1])
-plt.plot(wv_range, Rnorm, 'red', label ="R1 Simulation")
+plt.plot(wv_range, Rnorm, 'red', label ="R0 Simulation")
+
+#Rnorm_nometal = []
+#for wv in wv_range:
+#    n_list = get_n_list(wv,0)
+#    Rnorm_nometal.append(reflectivity(wv,n_list,d_list))
+#plt.plot(wv_range, Rnorm_nometal, 'grey', label ="No metal")
 
 expt_wv=[]
-expt_r1 = []
-with open("R1_vis_metal.tsv") as f:
+expt_r0 = []
+with open("reflectivity_air-metal-dbr.tsv") as f:
     reader = csv.DictReader(f, delimiter='\t')
     for row in reader:
         expt_wv.append(row['wv'])
-        expt_r1.append(row['R1'])
+        expt_r0.append(row['R0'])
 expt_wv = map(float,expt_wv)
-expt_r1 = [i*0.01 for i in map(float,expt_r1)]
-plt.plot(expt_wv,expt_r1,'black', label = "Experimental R1")
+expt_r0 = [i*0.01 for i in map(float,expt_r0)]
+plt.plot(expt_wv,expt_r0,'black', label = "Experimental R0")
 
 plt.xlabel('Wavelength (nm)')
 plt.ylabel('Fraction reflected')
@@ -109,3 +115,23 @@ plt.legend(loc=7, framealpha = 0.5)
 
 cid = main_fig.canvas.mpl_connect('button_press_event', get_field)
 plt.show()
+
+
+
+#expt_wv = []
+#expt_6L = []
+#expt_10L = []
+#expt_12L = []
+#
+#with open("vijay_data.tsv") as f:
+#    reader = csv.DictReader(f, delimiter='\t')
+#    for row in reader:
+#        expt_wv.append(row['wv'])
+#        expt_6L.append(row['6L'])
+#        expt_10L.append(row['10L'])
+#        expt_12L.append(row['12L'])
+#
+#expt_wv = map(float,expt_wv)
+#expt_6L = [i*0.01 for i in map(float,expt_6L)]
+#expt_10L = [i*0.01 for i in map(float,expt_10L)]
+#expt_12L = [i*0.01 for i in map(float,expt_12L)]

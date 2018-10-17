@@ -9,9 +9,7 @@ from __future__ import division, absolute_import
 
 from numpy import inf
 import numpy as np
-import sys
 import csv
-import matplotlib as mpl
 from matplotlib import  pyplot as plt
 
 from core_lib import reflectivity, e_field
@@ -24,7 +22,7 @@ def get_n_dbr(wavelength, n_stack):
     return n_list
     
 def get_d_dbr(n_stack):
-    d_a = 52
+    d_a = 51
     d_b = 105
     single_stack_d_list = [d_a,d_b]
     d_list = []
@@ -50,27 +48,18 @@ wv_u=1000
 wv_range = np.linspace(wv_l,wv_u,num=wv_u-wv_l+1)
 
 number_of_bilayers = 7
-#d_list = [inf] + [30] + get_d_dbr(number_of_bilayers) + [inf]
-#d_list[2]= 50
+d_list = [inf] + [30] + get_d_dbr(number_of_bilayers) + [inf]
 
-#def get_n_list(wv, metal=0):
-#    if metal==1:
-#        n_list = [1]+ [n_gold(np.floor(wv))] + get_n_dbr(np.floor(wv),number_of_bilayers) +[1]
-#    else:
-#        n_list = [1]+ [1] + get_n_dbr(np.floor(wv),number_of_bilayers) +[1]
-#    return n_list       
+def get_n_list(wv, metal=0):
+    if metal==1:
+        n_list = [1]+ [n_gold(np.floor(wv))] + get_n_dbr(np.floor(wv),number_of_bilayers) +[1]
+    else:
+        n_list = [1]+ [1] + get_n_dbr(np.floor(wv),number_of_bilayers) +[1]
+    return n_list       
      
-def get_n_list(lambda0, n_gap=1.63):
-    n_list = [1] + list(reversed(get_n_dbr(lambda0, number_of_bilayers))) + [n_gold(lambda0)] + [n_gap] + [n_gold(lambda0)] + get_n_dbr(lambda0, number_of_bilayers) + [1]
-    return n_list      
-d_metal = 30
-d_gap = 2000
-d_list = [inf] + list(reversed(get_d_dbr(number_of_bilayers)))+ [d_metal] + [d_gap] + [d_metal] + get_d_dbr(number_of_bilayers) + [inf]
-
 d_copied = list(d_list)
 d_copied[0] = d_copied[len(d_copied)-1] = 0
 x_range = np.linspace(0,sum(d_copied),num=sum(d_copied))
-
 
 def get_field(event):
     plt.figure(200)
@@ -100,22 +89,16 @@ main_fig = plt.figure(100)
 plt.ylim([0,1])
 plt.plot(wv_range, Rnorm, 'red', label ="R0 Simulation")
 
-#Rnorm_nometal = []
-#for wv in wv_range:
-#    n_list = get_n_list(wv,0)
-#    Rnorm_nometal.append(reflectivity(wv,n_list,d_list))
-#plt.plot(wv_range, Rnorm_nometal, 'grey', label ="No metal")
-
-#expt_wv=[]
-#expt_r2 = []
-#with open("R2_vis_metal.tsv") as f:
-#    reader = csv.DictReader(f, delimiter='\t')
-#    for row in reader:
-#        expt_wv.append(row['wv'])
-#        expt_r2.append(row['R2'])
-#expt_wv = map(float,expt_wv)
-#expt_r2 = [i*0.01 for i in map(float,expt_r2)]
-#plt.plot(expt_wv,expt_r2,'black', label = "Experimental R0")
+expt_wv = []
+expt_r0 = []
+with open("plot_data_ri.tsv") as f:
+    reader = csv.DictReader(f, delimiter='\t')
+    for row in reader:
+        expt_wv.append(row['wv'])
+        expt_r0.append(row['R0'])        
+expt_wv = map(float,expt_wv)
+expt_r0 = [i*0.01 for i in map(float,expt_r0)]
+plt.plot(expt_wv, expt_r0, 'black', label ="R0 Experimental")
 
 plt.xlabel('Wavelength (nm)')
 plt.ylabel('Fraction reflected')
@@ -124,23 +107,3 @@ plt.legend(loc=7, framealpha = 0.5)
 
 cid = main_fig.canvas.mpl_connect('button_press_event', get_field)
 plt.show()
-
-
-
-#expt_wv = []
-#expt_6L = []
-#expt_10L = []
-#expt_12L = []
-#
-#with open("vijay_data.tsv") as f:
-#    reader = csv.DictReader(f, delimiter='\t')
-#    for row in reader:
-#        expt_wv.append(row['wv'])
-#        expt_6L.append(row['6L'])
-#        expt_10L.append(row['10L'])
-#        expt_12L.append(row['12L'])
-#
-#expt_wv = map(float,expt_wv)
-#expt_6L = [i*0.01 for i in map(float,expt_6L)]
-#expt_10L = [i*0.01 for i in map(float,expt_10L)]
-#expt_12L = [i*0.01 for i in map(float,expt_12L)]

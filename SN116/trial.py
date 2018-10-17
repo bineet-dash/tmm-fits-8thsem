@@ -22,8 +22,8 @@ def get_n_dbr_r(wavelength, n_stack):
     return n_list
     
 def get_d_dbr_r(n_stack):
-    d_a = 48
-    d_b = 104
+    d_a = 50
+    d_b = 100
     single_stack_d_list = [d_b,d_a]
     d_list = []
     for i in range(n_stack):
@@ -57,46 +57,46 @@ wv_range = np.linspace(wv_l,wv_u,num=wv_u-wv_l+1)
 
 Rnorm = []
 for wv in wv_range:
-    number_of_bilayers = 12
+    number_of_bilayers = 10
     d_list = [inf] + get_d_dbr_r(number_of_bilayers)+ [50] + [inf]
     n_list = get_n_list(wv)
     del d_list[len(d_list)-3]
     del n_list[len(n_list)-3]
     Rnorm.append(reflectivity(wv,n_list,d_list))
-plt.plot(wv_range, Rnorm, 'red', label ="12L Simulation")
+plt.plot(wv_range, Rnorm, 'red', label ="10L Simulation")
 
-expt_wv = []
-expt_10L = []
-expt_12L = []
-with open("SN116_20th_March.tsv") as f:
-    reader = csv.DictReader(f, delimiter='\t')
-    for row in reader:
-        expt_wv.append(row['wv'])
-        expt_10L.append(row['10L'])
-        expt_12L.append(row['12L'])
-expt_wv = map(float,expt_wv)
-expt_10L = [i*0.01 for i in map(float,expt_10L)]
-expt_12L = [i*0.01 for i in map(float,expt_12L)]
-plt.plot(expt_wv,expt_12L, 'black', label = "SN116 12L")
+#expt_wv = []
+#expt_10L = []
+#expt_12L = []
+#with open("SN116_20th_March.tsv") as f:
+#    reader = csv.DictReader(f, delimiter='\t')
+#    for row in reader:
+#        expt_wv.append(row['wv'])
+#        expt_10L.append(row['10L'])
+#        expt_12L.append(row['12L'])
+#expt_wv = map(float,expt_wv)
+#expt_10L = [i*0.01 for i in map(float,expt_10L)]
+#expt_12L = [i*0.01 for i in map(float,expt_12L)]
+#plt.plot(expt_wv,expt_10L, 'black', label = "10L metal")
 
 
 
-expt_nm_wv = []
-expt_nm_10L = []
-expt_nm_12L = []
-with open("no_metal_10_12L.tsv") as f:
-    reader = csv.DictReader(f, delimiter='\t')
-    for row in reader:
-        expt_nm_wv.append(row['wv'])
-        expt_nm_10L.append(row['10L'])
-        expt_12L.append(row['12L'])
-expt_nm_wv = map(float,expt_nm_wv)
-expt_nm_10L = map(float,expt_nm_10L)
-expt_nm_12L = map(float,expt_nm_12L)
+#expt_nm_wv = []
+#expt_nm_10L = []
+#expt_nm_12L = []
+#with open("no_metal_10_12L.tsv") as f:
+#    reader = csv.DictReader(f, delimiter='\t')
+#    for row in reader:
+#        expt_nm_wv.append(row['wv'])
+#        expt_nm_10L.append(row['10L'])
+#        expt_nm_12L.append(row['12L'])
+#expt_nm_wv = map(float,expt_nm_wv)
+#expt_nm_10L = map(float,expt_nm_10L)
+#expt_nm_12L = map(float,expt_nm_12L)
 
-expt_nm_10L = [i/max(expt_nm_10L) for i in map(float,expt_nm_10L)]
-expt_nm_12L = [i/max(expt_nm_10L) for i in map(float,expt_nm_12L)]
-plt.plot(expt_nm_wv[0::5],expt_nm_10L[0::5], 'grey', label = "SN116 No Metal 12L")
+#expt_nm_10L = [i/max(expt_nm_10L) for i in map(float,expt_nm_10L)]
+#expt_nm_12L = [i/max(expt_nm_12L) for i in map(float,expt_nm_12L)]
+#plt.plot(expt_nm_wv[0::5],expt_nm_12L[0::5], 'grey', label = "10L no metal")
 
 
 plt.xlabel('Wavelength (nm)')
@@ -115,7 +115,6 @@ def get_field(event):
         x_range = np.linspace(0,sum(d_copied),num=sum(d_copied))
         wv = np.floor(event.xdata)
         n_list = get_n_list(wv)
-        del n_list[len(n_list)-3]
         E_norm = e_field(wv, x_range,n_list, d_list)
         E_norm = [float(i)/max(E_norm) for i in E_norm]
         plt.plot(x_range,E_norm, label="Field for $\lambda$="+str(wv))
